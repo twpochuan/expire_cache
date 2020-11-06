@@ -90,13 +90,8 @@ class ExpireCache<K, V> {
       invalidate(key);
       return null;
     }
-    if (_cache.containsKey(key)) {
-      return _cache[key]._cacheObject;
-    }
-    if (_inflightSet.containsKey(key)) {
-      return _inflightSet[key].future;
-    }
-    return null;
+
+    return _cache[key]?._cacheObject ?? _inflightSet[key]?.future;
   }
 
   /// Mark a key as in flight. All the get function call on the same key after
@@ -112,7 +107,16 @@ class ExpireCache<K, V> {
     _inflightSet.clear();
   }
 
-  bool containsKey(K key) => _cache.containsKey(key);
+  bool containsKey(K key) {
+    if (!_cache.containsKey(key)) {
+      return false;
+    } else if (isCacheEntryExpired(key)) {
+      invalidate(key);
+      return false;
+    } else {
+      return true;
+    }
+  }
 
-  bool isKeyInFlightOrInCache(K key) => _inflightSet.containsKey(key) || _cache.containsKey(key);
+  bool isKeyInFlightOrInCache(K key) => _inflightSet.containsKey(key) || containsKey(key);
 }
