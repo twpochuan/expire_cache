@@ -8,6 +8,7 @@ import 'package:clock/clock.dart';
 class _CacheEntry<V> {
   final _cacheObject;
   final DateTime _createTime;
+
   _CacheEntry(this._cacheObject, this._createTime);
 }
 
@@ -37,12 +38,12 @@ class ExpireCache<K, V> {
   /// Map of outstanding set used to prevent concurrent loads of the same key.
   final _inflightSet = Map<K, Completer<V>>();
 
-  ExpireCache(
-      {this.clock = const Clock(),
-      this.expireDuration = const Duration(seconds: 120),
-      this.sizeLimit = 100,
-      this.gcDuration = const Duration(seconds: 180)})
-      : assert(sizeLimit > 0) {
+  ExpireCache({
+    this.clock = const Clock(),
+    this.expireDuration = const Duration(seconds: 120),
+    this.sizeLimit,
+    this.gcDuration = const Duration(seconds: 180),
+  }) {
     Timer.periodic(gcDuration, (Timer t) => _expireOutdatedEntries());
   }
 
@@ -54,7 +55,7 @@ class ExpireCache<K, V> {
       _inflightSet.remove(key);
     }
     _cache[key] = _CacheEntry(value, clock.now());
-    if (_cache.length > sizeLimit) {
+    if (sizeLimit != null && _cache.length > sizeLimit) {
       removeFirst();
     }
   }
@@ -80,8 +81,7 @@ class ExpireCache<K, V> {
     _inflightSet.remove(key);
   }
 
-  bool isCacheEntryExpired(K key) =>
-      clock.now().difference(_cache[key]._createTime) > expireDuration;
+  bool isCacheEntryExpired(K key) => clock.now().difference(_cache[key]._createTime) > expireDuration;
 
   /// Returns the value associated with [key]. If the [key] is in flight, it
   /// will get the [Future] of that in flight key.
@@ -114,6 +114,5 @@ class ExpireCache<K, V> {
 
   bool containsKey(K key) => _cache.containsKey(key);
 
-  bool isKeyInFlightOrInCache(K key) =>
-      _inflightSet.containsKey(key) || _cache.containsKey(key);
+  bool isKeyInFlightOrInCache(K key) => _inflightSet.containsKey(key) || _cache.containsKey(key);
 }
